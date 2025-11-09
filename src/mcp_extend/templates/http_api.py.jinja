@@ -1,0 +1,91 @@
+from fastmcp import FastMCP
+import httpx
+import os
+from typing import Dict, Any
+
+mcp = FastMCP("{{ tool_name }}")
+
+# Configuration - customize for your API
+API_BASE_URL = os.getenv("API_BASE_URL", "https://api.example.com")
+API_TOKEN = os.getenv("API_TOKEN", "")  # Optional: for authenticated APIs
+
+
+@mcp.tool()
+async def query_api(
+    endpoint: str,
+    params: Dict[str, str] = None
+) -> Dict[str, Any]:
+    """Query an API endpoint (generic function for any HTTP API)
+    
+    This tool runs locally and inherits your environment:
+    - For internal APIs: Inherits VPN connection and credentials
+    - For external APIs: Works with any public or authenticated HTTP API
+    
+    Args:
+        endpoint: API endpoint path (e.g., "debug/customer", "weather")
+        params: Optional query parameters (e.g., {"id": "12345"})
+        
+    Returns:
+        JSON response from the API
+        
+    Examples:
+        - Internal API: query_api("debug/customer", {"id": "12345"})
+        - External API: query_api("weather", {"city": "London"})
+        
+    Customize this function for your specific needs!
+    """
+    headers = {}
+    if API_TOKEN:
+        headers["Authorization"] = f"Bearer {API_TOKEN}"
+    
+    url = f"{API_BASE_URL}/{endpoint.lstrip('/')}"
+    
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.get(url, params=params, headers=headers)
+            response.raise_for_status()
+            return response.json()
+    except httpx.HTTPStatusError as e:
+        return {
+            "error": f"HTTP {e.response.status_code}",
+            "message": str(e),
+            "url": str(e.request.url)
+        }
+    except httpx.RequestError as e:
+        return {
+            "error": "Request failed",
+            "message": str(e),
+            "hint": "Check network connectivity and API accessibility"
+        }
+
+
+@mcp.tool()
+async def get_weather(location: str) -> str:
+    """Get weather information for a location (example of external API)
+    
+    Args:
+        location: City name or location
+        
+    Returns:
+        Weather information as a formatted string
+    """
+    async with httpx.AsyncClient() as client:
+        response = await client.get(
+            f"https://wttr.in/{location}",
+            params={"format": "j1"}
+        )
+        response.raise_for_status()
+        data = response.json()
+        
+        current = data['current_condition'][0]
+        return f"Weather in {location}: {current['temp_C']}°C, {current['weatherDesc'][0]['value']}"
+
+
+def main():
+    """Main entry point"""
+    mcp.run()
+
+
+if __name__ == "__main__":
+    main()
+

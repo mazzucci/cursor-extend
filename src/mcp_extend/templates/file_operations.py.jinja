@@ -1,0 +1,62 @@
+from fastmcp import FastMCP
+from pathlib import Path
+from typing import List
+
+mcp = FastMCP("{{ tool_name }}")
+
+
+@mcp.tool()
+def search_files(directory: str, pattern: str) -> List[str]:
+    """Search for files matching a pattern in a directory
+    
+    Args:
+        directory: Directory to search in
+        pattern: Glob pattern to match (e.g., "*.py", "*.txt")
+        
+    Returns:
+        List of matching file paths
+    """
+    dir_path = Path(directory).expanduser()
+    matches = dir_path.glob(pattern)
+    return [str(p) for p in matches if p.is_file()]
+
+
+@mcp.tool()
+def read_file_content(file_path: str, max_lines: int = 100) -> str:
+    """Read the content of a file
+    
+    Args:
+        file_path: Path to the file to read
+        max_lines: Maximum number of lines to read
+        
+    Returns:
+        File content as a string
+    """
+    path = Path(file_path).expanduser()
+    
+    if not path.exists():
+        return f"Error: File not found: {file_path}"
+    
+    if not path.is_file():
+        return f"Error: Not a file: {file_path}"
+    
+    with open(path, 'r') as f:
+        lines = [f.readline() for _ in range(max_lines)]
+        content = ''.join(lines)
+    
+    return content
+
+
+def main():
+    """Main entry point"""
+    mcp.run()
+
+
+if __name__ == "__main__":
+    main()
+
+
+
+
+
+

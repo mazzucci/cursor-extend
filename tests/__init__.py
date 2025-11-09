@@ -1,0 +1,9 @@
+"""
+Tests for mcp-scaffold
+"""
+
+
+
+
+
+
