@@ -13,6 +13,7 @@ from typing import Literal, Dict, Any
 import json
 import os
 from pathlib import Path
+from datetime import datetime
 from .generator import ToolGenerator
 
 mcp = FastMCP("Cursor Extend ⚡")
@@ -605,15 +606,44 @@ def _update_cursorrules_for_commands():
     
     This ensures Cursor automatically checks .cursor/commands.json when users
     ask about running, building, testing, or deploying.
+    
+    DEPRECATED: Use _update_cursorrules_for_commands_at_path() instead.
     """
     cursorrules_file = Path(".cursorrules")
+    _update_cursorrules_for_commands_at_path(cursorrules_file)
+
+
+def _update_cursorrules_for_commands_at_path(cursorrules_file: Path):
+    """Update or create .cursorrules at specific path
     
-    # The instruction block to add
+    Args:
+        cursorrules_file: Path object pointing to .cursorrules file
+    """
+    # GENERIC instructions (no hardcoded paths - must work when committed to git!)
     commands_instruction = """
-# Saved Commands
+# Saved Commands (cursor-extend)
+
 This project has saved commands in .cursor/commands.json.
+
 When the user asks about running, building, testing, deploying, or executing commands,
-check the saved commands first using list_remembered_commands().
+check the saved commands first.
+
+**IMPORTANT: Always pass project_path parameter**
+
+When calling cursor-extend tools, use the workspace root (the directory you opened in Cursor):
+
+```
+list_remembered_commands(project_path="<workspace_root>")
+remember_command(name="...", command="...", project_path="<workspace_root>")
+forget_command(name="...", project_path="<workspace_root>")
+```
+
+Replace <workspace_root> with the absolute path to this project's root directory.
+
+**Why:** This ensures commands are saved in THIS project, not globally.
+
+**Note:** These instructions are generic so this file can be committed to git.
+Each person's workspace_root will be different (wherever they cloned the repo).
 """
     
     # Check if .cursorrules already mentions saved commands
@@ -634,12 +664,12 @@ check the saved commands first using list_remembered_commands().
 def remember_command(
     name: str,
     command: str,
-    description: str = ""
+    description: str = "",
+    project_path: str = None
 ) -> dict:
     """Remember a shell command for easy recall - No Python or MCP knowledge needed!
     
-    Stores simple commands in .cursor/commands.json so you can just say
-    "run deploy" or "check logs" without creating a full MCP tool.
+    Stores simple commands in .cursor/commands.json in your project directory.
     
     Also creates/updates .cursorrules to tell Cursor to check saved commands automatically.
     
@@ -653,17 +683,86 @@ def remember_command(
         name: Short name to recall command (e.g., "deploy-staging", "check-logs")
         command: The shell command to run (e.g., "./scripts/deploy.sh staging")
         description: Human-readable description of what this does
+        project_path: Path to the project directory (REQUIRED - provide workspace root)
     
     Returns:
-        Confirmation with usage instructions
+        Confirmation with usage instructions, or request for project path confirmation
     
     Example:
-        remember_command("deploy", "./scripts/deploy.sh staging", "Deploy to staging")
-        → Now just say "run deploy" or "deploy to staging"
+        remember_command("deploy", "./scripts/deploy.sh staging", "Deploy to staging", 
+                        project_path="/Users/user/Projects/my-app")
+    
+    Note:
+        If project_path is not provided, returns a confirmation request.
+        This prevents accidentally saving to the wrong directory.
     """
     try:
-        # Ensure .cursor directory exists
-        cursor_dir = Path(".cursor")
+        # If no project_path provided, ask for confirmation
+        if project_path is None:
+            # Suggest current working directory
+            suggested_path = Path.cwd().resolve()
+            
+            return {
+                "status": "needs_confirmation",
+                "message": "⚠️  Project directory required",
+                "suggested_path": str(suggested_path),
+                "instructions_for_cursor": f"""
+I need to know where to save this command.
+
+**Detected directory:** {suggested_path}
+
+**Please ask the user:**
+
+"I'll save commands to your workspace directory:
+📁 {suggested_path}
+
+Is this correct? (This is the folder you opened in Cursor)
+
+- If yes: I'll create .cursor/commands.json and .cursorrules here
+- If no: Please provide the correct path
+
+(This confirmation is only needed for the first command in a project. 
+After that, .cursorrules will tell me where to save automatically.)"
+
+**If user confirms, call:**
+remember_command(name="{name}", command="{command}", description="{description}", project_path="{suggested_path}")
+
+**If user provides different path, call:**
+remember_command(name="{name}", command="{command}", description="{description}", project_path="<user's path>")
+""",
+                "saved_command": {
+                    "name": name,
+                    "command": command,
+                    "description": description
+                }
+            }
+        
+        # Resolve project path
+        project_dir = Path(project_path).resolve()
+        
+        # Safety check: Don't save to cursor-extend's own installation directory
+        if (project_dir / "src" / "mcp_extend" / "server.py").exists():
+            return {
+                "status": "error",
+                "message": "⚠️  This looks like cursor-extend's installation directory!",
+                "detected_path": str(project_dir),
+                "tip": "Please provide the path to YOUR project, not cursor-extend's directory.",
+                "example": "remember_command(name='build', command='npm run build', project_path='/Users/you/Projects/your-app')"
+            }
+        
+        # Safety check: Warn if path looks suspicious
+        path_str = str(project_dir)
+        if any(suspicious in path_str.lower() for suspicious in ['/tmp/', '\\temp\\', '/.cache/', '\\.cache\\', '/uvx-', '\\uvx-']):
+            return {
+                "status": "warning",
+                "message": "⚠️  Warning: Path looks like a temporary directory",
+                "detected_path": path_str,
+                "tip": "Are you sure you want to save commands here? This doesn't look like a project directory.",
+                "suggestion": "Please confirm the project path or provide the correct path to your project."
+            }
+        
+        # Ensure .cursor directory exists in the project
+        cursor_dir = project_dir / ".cursor"
         cursor_dir.mkdir(exist_ok=True)
         
         # Load existing commands
@@ -678,8 +777,8 @@ def remember_command(
         data["commands"][name] = {
             "command": command,
             "description": description or name,
-            "created": str(Path.cwd()),
-            "updated": "2024-11-09"
+            "created": datetime.now().isoformat(),
+            "updated": datetime.now().isoformat()
         }
         
         # Save
@@ -687,15 +786,29 @@ def remember_command(
             json.dump(data, f, indent=2)
         
         # Update .cursorrules to ensure Cursor checks saved commands
-        _update_cursorrules_for_commands()
+        cursorrules_file = project_dir / ".cursorrules"
+        _update_cursorrules_for_commands_at_path(cursorrules_file)
+        
+        full_path = str(commands_file.resolve())
         
         return {
             "status": "success",
-            "message": f"✅ Remembered '{name}'!",
+            "message": f"✅ Saved command '{name}'!",
+            "command_saved": {
+                "name": name,
+                "command": command,
+                "description": description or name
+            },
+            "files_updated": {
+                "commands": full_path,
+                "rules": str(cursorrules_file.resolve())
+            },
             "usage": f"Just say '{description or name}' or 'run {name}' to execute",
-            "command": command,
-            "location": str(commands_file),
-            "tip": "No Python needed - this is just a simple JSON file you can edit anytime!"
+            "next_steps": [
+                f"📁 View/edit commands: {full_path}",
+                "💡 Commit .cursor/ and .cursorrules to git to share with your team!",
+                "🎯 Add more commands or just start using them"
+            ]
         }
         
     except Exception as e:
@@ -707,24 +820,39 @@ def remember_command(
 
 
 @mcp.tool()
-def list_remembered_commands() -> dict:
+def list_remembered_commands(project_path: str = None) -> dict:
     """List all commands stored in .cursor/commands.json
     
     Shows all commands you've remembered, making it easy to see
     what's available without looking at the file.
     
+    Args:
+        project_path: Path to the project directory (provide workspace root)
+    
     Returns:
         Dictionary of all stored commands with their details
     """
     try:
-        commands_file = Path(".cursor/commands.json")
+        # If no project_path, suggest current directory
+        if project_path is None:
+            suggested_path = Path.cwd().resolve()
+            return {
+                "status": "needs_path",
+                "message": "⚠️  Project directory required",
+                "suggested_path": str(suggested_path),
+                "tip": f"Call: list_remembered_commands(project_path='{suggested_path}')"
+            }
+        
+        project_dir = Path(project_path).resolve()
+        commands_file = project_dir / ".cursor" / "commands.json"
         
         if not commands_file.exists():
             return {
                 "status": "success",
-                "message": "No commands saved yet",
+                "message": "No commands saved yet in this project",
                 "tip": "Use remember_command() to save your first command!",
-                "commands": {}
+                "commands": {},
+                "project": str(project_dir)
             }
         
         with open(commands_file, 'r') as f:
@@ -736,7 +864,8 @@ def list_remembered_commands() -> dict:
             "status": "success",
             "message": f"Found {len(commands)} saved command(s)",
             "commands": commands,
-            "file": str(commands_file),
+            "file": str(commands_file.resolve()),
+            "project": str(project_dir),
             "tip": "Say 'run <name>' to execute any of these commands"
         }
         
@@ -917,22 +1046,35 @@ CURSOR: "✅ Saved! Your team can now clone and use these immediately."
 
 
 @mcp.tool()
-def forget_command(name: str) -> dict:
+def forget_command(name: str, project_path: str = None) -> dict:
     """Remove a command from .cursor/commands.json
     
     Args:
         name: The name of the command to forget
+        project_path: Path to the project directory (provide workspace root)
     
     Returns:
         Confirmation of deletion
     """
     try:
-        commands_file = Path(".cursor/commands.json")
+        # If no project_path, suggest current directory
+        if project_path is None:
+            suggested_path = Path.cwd().resolve()
+            return {
+                "status": "needs_path",
+                "message": "⚠️  Project directory required",
+                "suggested_path": str(suggested_path),
+                "tip": f"Call: forget_command(name='{name}', project_path='{suggested_path}')"
+            }
+        
+        project_dir = Path(project_path).resolve()
+        commands_file = project_dir / ".cursor" / "commands.json"
         
         if not commands_file.exists():
             return {
                 "status": "error",
-                "message": "No commands file found"
+                "message": "No commands file found in this project",
+                "project": str(project_dir)
             }
         
         with open(commands_file, 'r') as f:
@@ -947,14 +1089,16 @@ def forget_command(name: str) -> dict:
             
             return {
                 "status": "success",
-                "message": f"✅ Forgot '{name}'",
-                "removed_command": removed["command"]
+                "message": f"✅ Forgot '{name}' from project",
+                "removed_command": removed["command"],
+                "project": str(project_dir)
             }
         else:
             return {
                 "status": "error",
-                "message": f"Command '{name}' not found",
-                "available": list(data.get("commands", {}).keys())
+                "message": f"Command '{name}' not found in project",
+                "available": list(data.get("commands", {}).keys()),
+                "project": str(project_dir)
             }
         
     except Exception as e:
