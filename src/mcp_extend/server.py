@@ -879,12 +879,12 @@ def list_remembered_commands(project_path: str = None) -> dict:
 
 @mcp.tool()
 def discover_project_commands() -> dict:
-    """Guide for Cursor to discover commands in this project - the "cursor extend" magic! 🔍
+    """Guide for Cursor to discover commands in this project - the command discovery magic! 🔍
     
     This is a GUIDE, not a template. It tells Cursor HOW to analyze the project
     using AI understanding to find command candidates that keep getting forgotten.
     
-    When user says "cursor extend" or "find commands to save":
+    When user says "discover commands" or "find commands to save":
     1. Use this guide to intelligently analyze the project
     2. Present discovered commands to the user
     3. Offer to save them with remember_command()
@@ -1022,7 +1022,7 @@ Say "save all" or "save [specific command]"
 """,
         
         "example_workflow": """
-USER: "cursor extend"
+USER: "discover commands in this project"
 CURSOR: *Calls discover_project_commands() → Gets this guide*
 CURSOR: *Reads package.json, README.md, Makefile intelligently*
 CURSOR: *Identifies 8 npm scripts, 3 documented README commands, 2 API endpoints*
