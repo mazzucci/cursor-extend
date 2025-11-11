@@ -1,5 +1,5 @@
 """
-Code generation logic for MCP tools
+Code generation logic for Python utility tools
 """
 
 from pathlib import Path
@@ -9,7 +9,7 @@ import re
 
 
 class ToolGenerator:
-    """Generates MCP tool projects from templates"""
+    """Generates Python utility tools from templates"""
     
     def __init__(self):
         self.env = Environment(
@@ -23,15 +23,15 @@ class ToolGenerator:
         tool_name: str,
         description: str,
         template_type: str,
-        output_dir: str = "~/cursor-mcp-tools"
+        output_dir: str = ".cursor/tools"
     ) -> Dict[str, Any]:
-        """Generate a new MCP tool project
+        """Generate a new Python utility tool
         
         Args:
-            tool_name: Name of the new tool (e.g., "Weather API", "File Utils")
+            tool_name: Name of the new tool (e.g., "github", "kibana")
             description: What the tool does
-            template_type: Type of template to use (basic_function, http_api, internal_api, file_operations)
-            output_dir: Where to create the tool (default: ~/cursor-mcp-tools)
+            template_type: Type of template to use (http_api, shell)
+            output_dir: Where to create the tool (default: .cursor/tools)
             
         Returns:
             Dictionary with status, path, files_created, and next_steps
@@ -41,40 +41,38 @@ class ToolGenerator:
         output_path.mkdir(parents=True, exist_ok=True)
         
         # Generate files
-        self._generate_server(output_path, tool_name, description, template_type)
+        self._generate_module(output_path, tool_name, description, template_type)
         self._generate_pyproject(output_path, tool_name, description, template_type)
-        self._generate_readme(output_path, tool_name, description, template_type)
         self._generate_gitignore(output_path)
         
-        script_name = self._to_script_name(tool_name)
+        module_name = self._sanitize_name(tool_name).replace('-', '_')
         
         return {
             "status": "success",
             "path": str(output_path),
             "files_created": [
-                "server.py",
-                "pyproject.toml", 
-                "README.md",
+                f"{module_name}.py",
+                "pyproject.toml",
                 ".gitignore"
             ],
             "next_steps": [
                 f"cd {output_path}",
-                "uv sync",
-                "uv run python server.py",
-                "# Add to Cursor's MCP config"
-            ],
-            "install_command": f"uvx --from {output_path} {script_name}"
+                "uv sync  # Install dependencies",
+                f"python -c 'from {module_name} import *; print(\"Ready to use!\")'",
+                "# Or import in Cursor code execution"
+            ]
         }
     
-    def _generate_server(self, path: Path, name: str, desc: str, template: str):
-        """Generate the main server.py file"""
+    def _generate_module(self, path: Path, name: str, desc: str, template: str):
+        """Generate the main Python module file"""
         template_file = self.env.get_template(f'{template}.py.jinja')
         content = template_file.render(
             tool_name=name,
             description=desc,
             class_name=self._to_class_name(name)
         )
-        (path / "server.py").write_text(content)
+        module_name = self._sanitize_name(name).replace('-', '_')
+        (path / f"{module_name}.py").write_text(content)
     
     def _generate_pyproject(self, path: Path, name: str, desc: str, template: str):
         """Generate pyproject.toml"""
@@ -82,7 +80,7 @@ class ToolGenerator:
         
         # Determine dependencies based on template type
         extra_deps = []
-        if template in ["http_api", "internal_api"]:
+        if template == "http_api":
             extra_deps.append("httpx>=0.27.0")
         
         content = template_file.render(
@@ -92,22 +90,6 @@ class ToolGenerator:
             extra_dependencies=extra_deps
         )
         (path / "pyproject.toml").write_text(content)
-    
-    def _generate_readme(self, path: Path, name: str, desc: str, template: str):
-        """Generate README.md"""
-        template_file = self.env.get_template('README.md.jinja')
-        
-        # Determine if this is an internal tool
-        is_internal = template == "internal_api"
-        
-        content = template_file.render(
-            tool_name=name,
-            description=desc,
-            script_name=self._to_script_name(name),
-            path=str(path),
-            is_internal=is_internal
-        )
-        (path / "README.md").write_text(content)
     
     def _generate_gitignore(self, path: Path):
         """Generate .gitignore"""

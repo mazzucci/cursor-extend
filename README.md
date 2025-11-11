@@ -1,92 +1,61 @@
 # cursor-extend ⚡
 
-**Your project's commands, saved forever.**
+**Cursor writes code. cursor-extend lets it do a lot more!**
 
-Stop re-explaining the same build commands, deploy scripts, and test suites to Cursor every single day. Save once, works forever. Your whole team benefits.
+Give Cursor access beyond the codebase: run commands, check GitHub CI, query your APIs.
+
+Stop copy-pasting terminal output and errors. Cursor gets the info itself.
+
+cursor-extend saves commands and generates Python utilities in `.cursor/`. Commit to git. Your whole team benefits. Forever.
 
 ---
 
 <!-- 
 TODO: Add demo GIFs here
-- GIF 1: New engineer onboarding (clone → commands work immediately)
-- GIF 2: Save command once, use forever
+**GIF 1: Autonomous Iteration**
+*Cursor saves command, runs build, sees error, fixes it, repeats until passing*
+
+**GIF 2: Team Onboarding**  
+*New engineer clones repo → commands work immediately → zero setup*
+
 -->
 
 ---
 
-## 😤 The Problem
+### **Bonus: Team Onboarding**
 
-**New Engineer's First Day:**
-
-```
-Engineer: "How do I build this?"
-Senior Dev: "Oh, it's xcodebuild -workspace MyApp.xcworkspace -scheme..."
-[Explains 5 flags]
-
-Next Day:
-Engineer: "What was that build command again?"
-[Asks again, or tries to find it in Slack]
-
-Next Week:
-Engineer asks: "Run tests"
-Cursor: *tries wrong command*
-Engineer: *Explains again*
-```
-
-**Every new team member goes through this. Every single time.**
-
-Cursor has no memory. Your project documentation is scattered across Slack, READMEs, and tribal knowledge.
-
----
-
-## ✨ The Solution
-
-### **One Person Sets Up, Everyone Benefits**
-
-**Step 1:** Senior developer saves commands once
-```
-Developer A: "Remember: xcodebuild -workspace MyApp.xcworkspace..."
-Cursor: ✅ Saved to .cursor/commands.json
-Developer A: *Commits to git*
-```
-
-**Step 2:** New engineer clones repo
-```
-Developer B: *Clones repo, opens in Cursor*
-Developer B: "Build the iOS app"
-Cursor: ✅ *Runs the exact command* (no explaining needed!)
-```
-
-**Forever.**
+Commit `.cursor/commands.json` to git. New team members get commands automatically. No Slack threads. No tribal knowledge.
 
 ---
 
 ## 🎯 What is cursor-extend?
 
-**A setup tool that gives your project a memory.**
+**A tool that helps you save project commands to `.cursor/commands.json`.**
 
-It's like project documentation that Cursor actually reads and executes.
+cursor-extend makes it easy to:
+- ✅ Save commands with simple natural language ("Remember: npm run build")
+- ✅ Create `.cursor/commands.json` that Cursor reads automatically
+- ✅ Generate custom Python utilities for complex operations
+- ✅ Share commands with your team via git
 
-**Two ways to save knowledge:**
-
-### 1️⃣ **Simple Commands** (90% of use cases)
+### 1️⃣ **Simple Commands**
 Save shell commands to `.cursor/commands.json`:
 - Build scripts with complex flags
-- Deploy commands with environment configs
 - Test suites with specific options
-- Docker compose commands
-- Release workflows
+- Docker compose up/down
+- Database migrations
+- Development server commands
 
-**No code. Just JSON. Commit to git.**
+**Supports auto discovery, or save manually. No code generated, just JSON.**
 
-### 2️⃣ **Custom MCP Tools** (Advanced)
-Generate Python tools for operations that need logic:
+### 2️⃣ **Custom Python Utilities** (Advanced)
+Generate Python modules for operations that need logic:
 - Internal API wrappers (with validation)
-- Database queries (read-only, safe)
-- File operations (restricted directories)
-- Deploy scripts (with guardrails)
+- CLI tool wrappers (like GitHub's `gh`)
+- HTTP API clients (with auth and rate limiting)
+- Custom workflow automation
 
-**cursor-extend generates the code. You add safety rules.**
+**Pure Python modules - no MCP dependency. Works in Cursor, terminal, scripts, anywhere.**
 
 ---
 
@@ -130,7 +99,7 @@ Cursor: *Runs npm run build*
 ### 4. Share with Your Team
 
 ```bash
-git add .cursor/
+git add .cursor/ .cursorrules
 git commit -m "Add project commands"
 git push
 ```
@@ -139,68 +108,137 @@ git push
 
 ---
 
-## 💡 Use Cases
+## 🏗️ Architecture: Tool-as-Guide Pattern
 
-### 🏗️ Onboarding New Engineers
+cursor-extend implements the **"Tool-as-Guide"** pattern - a design where the MCP tool actively orchestrates workflows rather than passively returning data.
 
-**Before:**
-- New engineer asks: "How do I build this?"
-- Senior dev explains complex command
-- New engineer writes it down (maybe)
-- Next week: Asks again
-
-**After:**
-- New engineer clones repo
-- Cursor already knows all commands
-- Zero questions, instant productivity
-
-**Value:** Onboarding time cut by hours.
-
----
-
-### 📱 Complex Build Commands
-
-**React Native iOS build:**
-```bash
-cd ios && 
-pod install && 
-cd .. && 
-npx react-native run-ios --scheme MyApp --configuration Debug --simulator "iPhone 15 Pro"
+**Traditional MCP Tool (Passive):**
+```python
+# Returns data, AI figures out what to do
+mcp.tool() → {"code": "...", "config": "..."}
 ```
 
-**Save once:**
-```
-You: "Remember this as 'build-ios': [paste command]"
-```
-
-**Use forever:**
-```
-You: "Build iOS"
-Cursor: ✅ *Runs exact command*
-```
-
-**No more:**
-- Re-explaining flags
-- Copy-pasting from Slack
-- Looking up documentation
-- Remembering simulator names
-
----
-
-### 🚀 Deployment Workflows
-
-**Staging deploy with multiple steps:**
-```json
-{
-  "commands": {
-    "deploy-staging": "./scripts/deploy.sh staging --region us-east-1",
-    "deploy-prod": "./scripts/deploy.sh production --region us-east-1 --confirm",
-    "rollback": "./scripts/rollback.sh"
-  }
+**Tool-as-Guide (Active):**
+```python
+# Returns instructions + data
+mcp.tool() → {
+    "instructions_for_cursor": "Step 1: Show user what you'll create. 
+                                 Step 2: ASK for confirmation. 
+                                 Step 3: Write files...",
+    "reference_implementation": {...},
+    "next_steps": {...}
 }
 ```
 
-**Everyone on the team can deploy. Safely. Consistently.**
+**Why this matters:**
+- 🧠 **Workflow logic lives in the tool** - Not scattered across AI prompts
+- 🎯 **Consistent execution** - Same steps every time, not dependent on AI interpretation  
+- 🔧 **Easier to debug** - Workflow is code, not emergent behavior
+- 📈 **Scales better** - Complex workflows don't overwhelm context window
+
+Examples in cursor-extend:
+- `get_mcp_tool_guide()` - Guides Cursor through tool creation workflow
+- `discover_project_commands()` - Provides analysis steps and presentation format
+
+This pattern is particularly useful for multi-step workflows where consistency matters more than flexibility.
+
+### Real-World Example: Medical Triage (Conceptual)
+
+> **⚠️ Disclaimer**: This is a simplified conceptual example to illustrate the pattern's value in high-stakes domains. Real medical AI systems require clinical expertise, regulatory approval, and extensive validation. This is NOT production medical software.
+
+Consider a medical triage system. Without the Tool-as-Guide pattern, an AI might skip vital signs, miss red flags, or jump to conclusions. With the guide pattern, clinical protocols are enforced:
+
+```python
+@mcp.tool()
+def triage_workflow(session_id: str, user_input: str) -> dict:
+    """Guide AI through medical triage protocol"""
+    
+    session = get_session(session_id)
+    
+    # CRITICAL: Red flags must be checked first
+    if not session.state.get("red_flags_screened"):
+        return {
+            "action": "screen_red_flags",
+            "prompt": "Before we continue, do you have: severe chest pain, "
+                     "difficulty breathing, or loss of consciousness?",
+            "required": True
+        }
+    
+    # Immediate escalation if red flags present
+    if session.state.get("red_flags_present"):
+        return {
+            "action": "emergency_escalation",
+            "message": "Please call 911 immediately.",
+            "severity": "CRITICAL"
+        }
+    
+    # Standard protocol steps (cannot skip)
+    if not session.state.get("vital_signs_gathered"):
+        return {
+            "action": "request_vital_signs",
+            "required": True,
+            "cannot_skip": True  # Protocol enforcement
+        }
+    
+    # Only after all required steps
+    return {
+        "action": "provide_assessment",
+        "protocol_followed": True,
+        "audit_trail": session.get_audit_log()
+    }
+```
+
+**Why this matters:**
+- ✅ **Mandatory protocol steps** cannot be skipped
+- ✅ **Red flag screening** happens first, always  
+- ✅ **Audit trail** shows compliance for legal/regulatory review
+- ✅ **Consistency** across all cases, regardless of AI model
+
+This pattern applies to any domain where reliability and compliance are critical: financial trading, legal review, deployment pipelines, and more.
+
+**🍕 Want to see it in action?** Check out the [pizza ordering demo](https://github.com/mazzucci/mcp-tool-as-guide-pizza) - a complete, runnable implementation of the Tool-as-Guide pattern with an animated demo!
+
+---
+
+## 💡 Use Cases
+
+### 🤖 Autonomous Development (The Main Benefit)
+
+**You:** "Add email validation to the signup form"
+
+**Cursor:**
+1. Adds validation function
+2. Runs `npm run build` → TypeScript error: "Property 'email' not found"
+3. Fixes the type definition
+4. Runs `npm run build` → Success
+5. Runs `npm test` → 1 test fails (invalid email passes)
+6. Fixes the regex pattern
+7. Runs `npm test` → All pass
+8. "✅ Email validation added and tested"
+
+**You never touched the terminal.** Cursor iterated autonomously because it knows your commands.
+
+**Value:** 10x faster development. Cursor debugs its own work.
+
+---
+
+### 📱 Complex Commands (No More Copy-Paste)
+
+**React Native iOS:**
+```bash
+cd ios && pod install && cd .. && 
+npx react-native run-ios --scheme MyApp --configuration Debug --simulator "iPhone 15 Pro"
+```
+
+**Save once:** `"Remember: build-ios"`
+
+**Use forever:** Cursor runs it perfectly. No flags to remember. No Slack archaeology.
+
+---
+
+### 🏗️ Team Onboarding
+
+Commit commands to git. New engineers clone → Cursor knows everything. Zero Slack questions.
 
 ---
 
@@ -225,67 +263,50 @@ Cursor: ✅ *Runs exact command*
 
 ### **The Magic: Cursor Reads Your Project Files**
 
-When cursor-extend saves a command:
+When you save a command with cursor-extend:
 
-1. **Creates `.cursor/commands.json`** (stores commands)
-2. **Updates `.cursorrules`** (tells Cursor to check commands)
+1. **Creates `.cursor/commands.json`** in your project (stores commands)
+2. **Updates `.cursorrules`** in your project (tells Cursor to check commands)
 3. **Cursor automatically reads these files** when you open the project
 
 **No runtime dependency. No server. Just files in git.**
+
+> **💡 Why This Works So Well**
+> 
+> Cursor has powerful built-in features that many users don't know about:
+> - **`.cursorrules`** - Project-specific instructions Cursor reads automatically
+> - **MCP (Model Context Protocol)** - Extensible tool system for AI editors
+> - **Project-level configs** - Settings that travel with your code
+> 
+> cursor-extend helps you take advantage of these native Cursor capabilities—and extends them with custom tools when needed. We're building on Cursor's solid foundations, not working around them.
+
+---
 
 ### **Your Repo Structure:**
 
 ```
 my-project/
   ├── .cursor/
-  │   └── commands.json          ← Commands (commit this!)
+  │   ├── commands.json          ← Commands (commit this!)
+  │   └── tools/                 ← Python utilities (commit this!)
+  │       └── github/            ← Example: PR lint checker
   ├── .cursorrules               ← Auto-updated (commit this!)
-  ├── .gitignore                 ← Optionally ignore .cursor/commands.local.json
   └── ... (your code)
 ```
 
 ### **For Advanced Users:**
 
-You can also generate custom MCP tools in `.mcp-tool/` directory:
-- Python-based tools with validation logic
-- API wrappers with auth and rate limiting
-- Database query helpers (read-only, safe)
-- File operation tools (restricted directories)
+You can also generate custom Python utilities in `.cursor/tools/`:
+- Pure Python modules - no MCP dependency
+- Works in Cursor's code execution, terminal, scripts, anywhere
+- Validation logic, rate limiting, transformations
+- Commit to git - your whole team gets them
 
-These tools give you full control: validation, restrictions, audit logging, transformations.
+**Templates available:**
+- `http_api` - Async HTTP clients (uses httpx)
+- `shell` - CLI tool wrappers (uses subprocess)
 
----
-
-## 📦 What You Can Save
-
-### ✅ Build Commands
-- `npm run build`
-- `cargo build --release`
-- `./gradlew assembleRelease`
-- Complex xcodebuild commands
-
-### ✅ Test Commands
-- `npm test`
-- `pytest -v`
-- `go test ./...`
-- E2E test suites
-
-### ✅ Deploy Scripts
-- `./deploy.sh staging`
-- `kubectl apply -f k8s/`
-- `terraform apply`
-
-### ✅ Development Workflows
-- `docker-compose up -d`
-- `npm run dev`
-- Database migrations
-- Code generation scripts
-
-### ✅ Anything You Run Repeatedly
-- Git workflows
-- Release processes
-- Cleanup scripts
-- Environment setup
+See [detailed examples](docs/EXAMPLES.md) for GitHub PR checkers, weather APIs, and more.
 
 ---
 
@@ -293,208 +314,93 @@ These tools give you full control: validation, restrictions, audit logging, tran
 
 When you install cursor-extend, you get these tools in Cursor:
 
-**Command Management:**
-- `remember_command(name, command, description)` - Save a command
-- `list_remembered_commands()` - See all saved commands
-- `forget_command(name)` - Remove a command
-
-**Advanced Features:**
-- `discover_project_commands()` - AI analyzes project, suggests commands to save
-- `get_mcp_tool_guide(...)` - Generate custom MCP tools with logic
-- `validate_mcp_tool(path)` - Validate generated tools
-- `add_tool_to_cursor_config(...)` - Auto-configure tools
+**Core Functions:**
+- `remember_command(name, command, description, project_path)` - Save a command to `.cursor/commands.json`
+- `discover_project_commands()` - AI analyzes project and suggests commands to save
+- `get_mcp_tool_guide(tool_type, requirements, name, project_path)` - Generate Python utilities
 
 **Just ask Cursor naturally:**
 - "Remember this command: npm run build"
-- "What commands are saved in this project?"
-- "Create a tool for api.company.com/debug"
+- "Discover commands in this project"
+- "Create a GitHub PR checker using the shell template"
 
 ---
 
-## 🤝 Team Workflow
+## 🎓 Advanced: Custom Python Utilities
 
-### **Perfect for:**
+### 💡 Inspired By Recent Research
 
-✅ **Onboarding new engineers**
-- Commands are discoverable immediately
-- No tribal knowledge required
-- Productive on day 1
+cursor-extend generates pure Python utilities instead of MCP servers, inspired by 
+research from [Anthropic](https://www.anthropic.com/engineering/code-execution-with-mcp) 
+and [Cloudflare](https://blog.cloudflare.com/code-mode/) showing LLMs perform better 
+writing code than making tool calls.
 
-✅ **Complex projects**
-- React Native, iOS, Android builds
-- Multi-service deployments
-- Microservices architectures
+cursor-extend bridges the gap by making these patterns easy to use with simple commands.
 
-✅ **Growing teams**
-- Junior devs get senior-level commands
-- Consistent workflows across team
-- Knowledge doesn't leave when people do
-
-✅ **Documentation that works**
-- Lives in git, evolves with project
-- Cursor actually uses it
-- Never gets outdated
+**Key benefits:**
+- **Context efficiency** - Data processed in code, only summaries enter LLM context
+- **Better performance** - LLMs excel at writing Python (millions of examples in training)
+- **Portability** - Works anywhere Python runs, not just in Cursor
 
 ---
 
-## 💡 Pro Tips
+### **Example: GitHub PR Lint Checker**
 
-### **Start Simple**
 ```
-1. Save 3-5 commands you use daily
-2. Commit to git
-3. Watch team adoption grow organically
-```
+You: "Create a GitHub PR checker using the shell template"
 
-### **Use Descriptive Names**
-```json
-{
-  "build-ios-simulator": "cd ios && pod install && ...",
-  "build-ios-device": "cd ios && pod install && ...",
-  "test-unit": "npm test",
-  "test-e2e-headless": "npm run test:e2e -- --headless"
-}
+Cursor: *Generates pure Python module in .cursor/tools/github/*
 ```
 
-### **Add Comments (via descriptions)**
-cursor-extend saves metadata with each command. Use the description field to add context.
+**The generated module:**
+- Wraps `gh` CLI with subprocess
+- Has functions like `get_pr_lint_errors()`
+- Pure Python - no MCP dependency
+- Works in Cursor, terminal, scripts, anywhere
 
-### **Personal Commands**
-Want personal commands that don't get committed?
-- Use `.cursor/commands.local.json` (add to `.gitignore`)
-- Future feature, coming soon!
+**Then you can:**
+```python
+# Cursor writes this code and runs it
+from github import get_pr_lint_errors
+
+errors = get_pr_lint_errors()
+print(errors)
+# Only the output enters Cursor's context
+```
+
+**Result:** Cursor can autonomously check CI status, fix errors, and verify - all without you touching the terminal.
+
+See [detailed examples](docs/EXAMPLES.md) for complete implementations.
 
 ---
 
-## 🎓 Advanced: Custom MCP Tools
-
-For operations that need **logic, validation, or restrictions**, generate custom MCP tools:
-
-### **Example: Internal API Wrapper**
-
-```
-You: "Create a tool for api.company.com/debug/customer"
-
-Cursor: *Generates Python MCP tool*
-```
-
-**Then you customize it:**
-- Add validation (ensure customer IDs are valid)
-- Add rate limiting (prevent API abuse)
-- Add audit logging (track who queries what)
-- Hide sensitive fields (SSN, credit cards)
-- Read-only access only
-
-**Result:** Safe, controlled access to internal APIs. Junior devs can query data without breaking anything.
-
-### **When to Use Custom Tools:**
-- ✅ Need input validation
-- ✅ Need rate limiting
-- ✅ Need audit trails
-- ✅ Need data transformations
-- ✅ Need access restrictions
+### **When to Use Python Utilities:**
+- ✅ Need to wrap CLI tools (gh, docker, kubectl)
+- ✅ Need to query HTTP APIs with logic
+- ✅ Need input validation or transformations
+- ✅ Want data processing outside LLM context
 
 ### **When to Use Simple Commands:**
 - ✅ Shell commands work as-is
-- ✅ No logic needed
-- ✅ Just want memory
+- ✅ No logic or validation needed
+- ✅ Just want Cursor to remember the command
 
-**Rule of thumb:** Start with simple commands. Upgrade to tools when you need control.
-
----
-
-## 🔍 How cursor-extend Actually Works
-
-### **The "Guide-as-a-Service" Pattern**
-
-cursor-extend is **not a traditional tool**. It's a **guide** for Cursor.
-
-**Traditional MCP tools:**
-```
-User: "Get weather"
-Tool: *Makes HTTP request*
-Tool: *Returns data*
-```
-
-**cursor-extend:**
-```
-User: "Create a tool for my API"
-cursor-extend: *Returns instructions to Cursor*
-Cursor: *Reads instructions*
-Cursor: *Writes the actual tool code*
-```
-
-**Why this is powerful:**
-- ✅ Cursor does the work (you just provide requirements)
-- ✅ Tools are generated as real code (you can review/edit)
-- ✅ No black box magic (everything is transparent)
-- ✅ Tools improve as Cursor's AI improves
-
-**You describe what you want. Cursor builds it. cursor-extend teaches Cursor how.**
+**Rule of thumb:** Start with simple commands. Generate utilities when you need logic or want to process data efficiently.
 
 ---
 
-## 📚 What's Next?
+## 🛠️ Development & Support
 
-### **After Launch:**
+**Contributing:** See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup and guidelines.
 
-Based on user feedback, we may add:
-- Simple command discovery (parse package.json, Makefile)
-- Personal/local commands (git-ignored)
-- More tool templates (GitHub, Kubernetes, databases)
-- Investigation workflows (debug production issues)
-- Guide marketplace (share workflows)
+**Requirements:** Cursor IDE with MCP support • Python 3.10+ • Works on macOS/Linux (Windows mostly untested)
 
-**But first:** We're validating that command memory solves real problems.
+**Built with:** [FastMCP](https://gofastmcp.com) (cursor-extend is an MCP extension) • Generated utilities are pure Python
 
-**Your feedback shapes the roadmap.** 🚀
+**Feedback:** [Issues](https://github.com/mazzucci/cursor-extend/issues) • [Discussions](https://github.com/mazzucci/cursor-extend/discussions) • ⭐ Star if useful!
+
+**License:** MIT
 
 ---
 
-## 🛠️ Installation Notes
-
-### **Requirements:**
-- Cursor IDE (with MCP support)
-- Python 3.10+ (for generated tools)
-- `uv` or `pip` (for package management)
-
-### **Platform Support:**
-- ✅ macOS (tested)
-- ✅ Linux (tested)
-- ⚠️ Windows (should work, not extensively tested)
-
-### **For Local Development:**
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, testing, and contribution guidelines.
-
----
-
-## 📚 Learn More
-
-- [FastMCP Documentation](https://gofastmcp.com) - Framework powering cursor-extend
-- [Model Context Protocol](https://modelcontextprotocol.io/) - MCP specification
-- [Cursor IDE](https://cursor.sh/) - AI-first code editor
-
----
-
-## 📄 License
-
-MIT License - See [LICENSE](LICENSE) file
-
----
-
-## 🙏 Acknowledgments
-
-Built on [FastMCP](https://gofastmcp.com) by the FastMCP team.
-
----
-
-## 💬 Feedback & Support
-
-- 🐛 **Found a bug?** [Open an issue](https://github.com/mazzucci/cursor-extend/issues)
-- 💡 **Have an idea?** [Start a discussion](https://github.com/mazzucci/cursor-extend/discussions)
-- ⭐ **Like it?** Star the repo!
-
----
-
-**Stop re-teaching Cursor every day. Your project remembers.** ⚡
+**Cursor writes code. cursor-extend lets it do a lot more!** ⚡

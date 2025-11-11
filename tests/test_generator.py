@@ -1,5 +1,5 @@
 """
-Tests for the MCP tool generator
+Tests for the Python utility generator
 """
 
 import pytest
@@ -22,34 +22,35 @@ def generator():
     return ToolGenerator()
 
 
-def test_generate_basic_tool(generator, temp_output_dir):
-    """Test generating a basic function tool"""
+def test_generate_shell_tool(generator, temp_output_dir):
+    """Test generating a shell command utility"""
     result = generator.generate_tool(
-        tool_name="test-calculator",
-        description="Test calculator tool",
-        template_type="basic_function",
+        tool_name="test-shell",
+        description="Test shell command tool",
+        template_type="shell",
         output_dir=temp_output_dir
     )
     
     assert result["status"] == "success"
-    assert "test-calculator" in result["path"]
+    assert "test-shell" in result["path"]
     
     # Check files were created
     tool_path = Path(result["path"])
-    assert (tool_path / "server.py").exists()
+    assert (tool_path / "test_shell.py").exists()
     assert (tool_path / "pyproject.toml").exists()
-    assert (tool_path / "README.md").exists()
     assert (tool_path / ".gitignore").exists()
     
-    # Check server.py contains expected content
-    server_content = (tool_path / "server.py").read_text()
-    assert "FastMCP" in server_content
-    assert "def add" in server_content
-    assert "def multiply" in server_content
+    # Check module contains expected content (pure Python, no FastMCP)
+    module_content = (tool_path / "test_shell.py").read_text()
+    assert "subprocess" in module_content
+    assert "run_command" in module_content
+    assert "check_command_available" in module_content
+    assert "FastMCP" not in module_content  # Should NOT have FastMCP
+    assert "@mcp.tool()" not in module_content  # Should NOT have decorators
 
 
 def test_generate_http_api_tool(generator, temp_output_dir):
-    """Test generating an HTTP API tool (works for both external and internal APIs)"""
+    """Test generating an HTTP API utility"""
     result = generator.generate_tool(
         tool_name="api-tool",
         description="HTTP API wrapper",
@@ -59,32 +60,16 @@ def test_generate_http_api_tool(generator, temp_output_dir):
     
     assert result["status"] == "success"
     
-    # Verify server.py contains expected content
-    server_content = (Path(result["path"]) / "server.py").read_text()
-    assert "httpx" in server_content
-    assert "async" in server_content
-    assert "query_api" in server_content  # Generic function
-    assert "get_weather" in server_content  # Working example
-    assert "API_BASE_URL" in server_content  # Configuration
-    assert "API_TOKEN" in server_content  # Auth support
-
-
-def test_generate_file_ops_tool(generator, temp_output_dir):
-    """Test generating a file operations tool"""
-    result = generator.generate_tool(
-        tool_name="file-search",
-        description="File search utilities",
-        template_type="file_operations",
-        output_dir=temp_output_dir
-    )
-    
-    assert result["status"] == "success"
-    
-    # Verify server.py contains file ops code
-    server_content = (Path(result["path"]) / "server.py").read_text()
-    assert "Path" in server_content
-    assert "search_files" in server_content
-    assert "read_file_content" in server_content
+    # Verify module contains expected content (pure Python, no FastMCP)
+    module_content = (Path(result["path"]) / "api_tool.py").read_text()
+    assert "httpx" in module_content
+    assert "async" in module_content
+    assert "query_api" in module_content  # Generic function
+    assert "API_BASE_URL" in module_content  # Configuration
+    assert "API_TOKEN" in module_content  # Auth support
+    assert "Add your API-specific functions here" in module_content  # Guidance comment
+    assert "FastMCP" not in module_content  # Should NOT have FastMCP
+    assert "@mcp.tool()" not in module_content  # Should NOT have decorators
 
 
 def test_generated_tool_is_valid_python(generator, temp_output_dir):
@@ -92,16 +77,16 @@ def test_generated_tool_is_valid_python(generator, temp_output_dir):
     result = generator.generate_tool(
         tool_name="test-tool",
         description="Test",
-        template_type="basic_function",
+        template_type="shell",
         output_dir=temp_output_dir
     )
     
-    server_file = Path(result["path"]) / "server.py"
+    module_file = Path(result["path"]) / "test_tool.py"
     
     # Try to compile the generated Python code
     import py_compile
     try:
-        py_compile.compile(str(server_file), doraise=True)
+        py_compile.compile(str(module_file), doraise=True)
     except py_compile.PyCompileError as e:
         pytest.fail(f"Generated Python code is invalid: {e}")
 
@@ -111,7 +96,7 @@ def test_tool_name_sanitization(generator, temp_output_dir):
     result = generator.generate_tool(
         tool_name="My Cool Tool!!!",
         description="Test",
-        template_type="basic_function",
+        template_type="shell",
         output_dir=temp_output_dir
     )
     
@@ -119,21 +104,24 @@ def test_tool_name_sanitization(generator, temp_output_dir):
     # Should create a valid directory name
     assert Path(result["path"]).exists()
     assert "my-cool-tool" in result["path"].lower()
+    # Should create valid Python module name
+    assert Path(result["path"] + "/my_cool_tool.py").exists()
 
 
 def test_get_mcp_tool_guide(temp_output_dir):
     """Test the get_mcp_tool_guide function"""
     from mcp_extend.server import _get_mcp_tool_guide_impl
     
+    # Test with project_path provided
     result = _get_mcp_tool_guide_impl(
         tool_type="http_api",
         user_requirements="Query weather API",
-        tool_name="weather-tool",
-        output_path=temp_output_dir
+        tool_name="weather",
+        project_path=temp_output_dir
     )
     
     assert result["status"] == "success"
-    assert result["tool_name"] == "weather-tool"
+    assert result["tool_name"] == "weather"
     assert result["tool_type"] == "http_api"
     assert "project_structure" in result
     assert "reference_implementation" in result
@@ -141,39 +129,31 @@ def test_get_mcp_tool_guide(temp_output_dir):
     assert "best_practices" in result
     assert "next_steps" in result
     
-    # Check reference code is included
-    assert "server.py" in result["reference_implementation"]
+    # Check reference code is included (module name, not server.py)
+    assert "weather.py" in result["reference_implementation"]
     assert "pyproject.toml" in result["reference_implementation"]
-    assert "fastmcp" in result["reference_implementation"]["server.py"].lower()
-
-
-def test_validate_mcp_tool(generator, temp_output_dir):
-    """Test the validate_mcp_tool function"""
-    from mcp_extend.server import _validate_mcp_tool_impl
+    # Should NOT have FastMCP
+    assert "fastmcp" not in result["reference_implementation"]["weather.py"].lower()
+    # Should have httpx
+    assert "httpx" in result["reference_implementation"]["weather.py"].lower()
     
-    # Generate a tool first
-    result = generator.generate_tool(
-        tool_name="test-tool",
-        description="Test",
-        template_type="basic_function",
-        output_dir=temp_output_dir
+    # Check that MCP config is NOT present (pure Python modules don't need it)
+    assert "mcp_config_to_merge" not in result
+    assert "mcp_config_path" not in result
+    assert "mcp_merge_instructions" not in result
+    
+    # Verify tool directory is in .cursor/tools/ (not mcp-tools)
+    assert ".cursor/tools" in result["project_structure"]["tool_directory"]
+    assert ".cursor/mcp-tools" not in result["project_structure"]["tool_directory"]
+    
+    # Test without project_path (should return error)
+    result = _get_mcp_tool_guide_impl(
+        tool_type="http_api",
+        user_requirements="Query weather API",
+        tool_name="weather",
+        project_path=None
     )
     
-    # Validate it
-    validation = _validate_mcp_tool_impl(result["path"])
-    
-    assert validation["status"] in ["success", "warning"]
-    assert len(validation["checks_passed"]) > 0
-    assert "server.py" in str(validation["checks_passed"])
-    assert "pyproject.toml" in str(validation["checks_passed"])
-
-
-def test_validate_nonexistent_tool():
-    """Test validation of non-existent tool"""
-    from mcp_extend.server import _validate_mcp_tool_impl
-    
-    result = _validate_mcp_tool_impl("/nonexistent/path/to/tool")
-    
     assert result["status"] == "error"
-    assert "does not exist" in result["error"]
-
+    assert result["error"] == "project_path parameter is required"
+    assert "instructions" in result
