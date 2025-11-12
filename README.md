@@ -1,5 +1,7 @@
 # cursor-extend ⚡
 
+> **⚠️ PREVIEW**: This project is currently in preview. APIs and features may change. Not yet recommended for production use.
+
 **Cursor writes code. cursor-extend lets it do a lot more!**
 
 Give Cursor access beyond the codebase: run commands, check GitHub CI, query your APIs.
@@ -108,95 +110,48 @@ git push
 
 ---
 
-## 🏗️ Architecture: Tool-as-Guide Pattern
+## 🏗️ Architecture: Pure Tool-as-Guide Implementation
 
-cursor-extend implements the **"Tool-as-Guide"** pattern - a design where the MCP tool actively orchestrates workflows rather than passively returning data.
+cursor-extend is a **pure implementation** of the **"Tool-as-Guide"** pattern - MCP tools provide step-by-step instructions, and Cursor executes them.
 
-**Traditional MCP Tool (Passive):**
-```python
-# Returns data, AI figures out what to do
-mcp.tool() → {"code": "...", "config": "..."}
+**What makes it "pure":**
+- ⚡ **Tools never write files** - They provide instructions for Cursor to write files
+- 🎯 **Cursor stays in control** - User sees all changes, transparent workflow
+- 🧠 **Workflow logic in the tool** - Instructions are consistent and testable
+- 📝 **Confirmation required** - Cursor always asks user before making changes
+
+**How it works:**
+
 ```
-
-**Tool-as-Guide (Active):**
-```python
-# Returns instructions + data
-mcp.tool() → {
-    "instructions_for_cursor": "Step 1: Show user what you'll create. 
-                                 Step 2: ASK for confirmation. 
-                                 Step 3: Write files...",
-    "reference_implementation": {...},
-    "next_steps": {...}
+User: "Remember command: npm run build"
+          ↓
+Tool: remember_command() returns {
+    "instructions_for_cursor": "Ask user: 'Save to .cursor/commands.json?'
+                                 Step 1: Read/create .cursor/commands.json
+                                 Step 2: Add command entry
+                                 Step 3: Write file
+                                 Step 4: Update .cursorrules...",
+    "command_entry": {...},
+    "cursorrules_content": "..."
 }
+          ↓
+Cursor: "I'll save 'build' to .cursor/commands.json. Proceed?"
+          ↓
+User: "Yes"
+          ↓
+Cursor: *Writes files following the instructions*
+          ↓
+Cursor: "✅ Saved! Commit .cursor/ to git for your team."
 ```
 
-**Why this matters:**
-- 🧠 **Workflow logic lives in the tool** - Not scattered across AI prompts
-- 🎯 **Consistent execution** - Same steps every time, not dependent on AI interpretation  
-- 🔧 **Easier to debug** - Workflow is code, not emergent behavior
-- 📈 **Scales better** - Complex workflows don't overwhelm context window
+**Benefits:**
+- ✅ **Simpler tool code** - No file I/O, no path resolution
+- ✅ **Better UX** - User sees Cursor make changes
+- ✅ **No conflicts** - Cursor owns all file modifications
+- ✅ **True separation** - Tool = guide, Cursor = executor
 
-Examples in cursor-extend:
-- `get_mcp_tool_guide()` - Guides Cursor through tool creation workflow
-- `discover_project_commands()` - Provides analysis steps and presentation format
-
-This pattern is particularly useful for multi-step workflows where consistency matters more than flexibility.
-
-### Real-World Example: Medical Triage (Conceptual)
-
-> **⚠️ Disclaimer**: This is a simplified conceptual example to illustrate the pattern's value in high-stakes domains. Real medical AI systems require clinical expertise, regulatory approval, and extensive validation. This is NOT production medical software.
-
-Consider a medical triage system. Without the Tool-as-Guide pattern, an AI might skip vital signs, miss red flags, or jump to conclusions. With the guide pattern, clinical protocols are enforced:
-
-```python
-@mcp.tool()
-def triage_workflow(session_id: str, user_input: str) -> dict:
-    """Guide AI through medical triage protocol"""
-    
-    session = get_session(session_id)
-    
-    # CRITICAL: Red flags must be checked first
-    if not session.state.get("red_flags_screened"):
-        return {
-            "action": "screen_red_flags",
-            "prompt": "Before we continue, do you have: severe chest pain, "
-                     "difficulty breathing, or loss of consciousness?",
-            "required": True
-        }
-    
-    # Immediate escalation if red flags present
-    if session.state.get("red_flags_present"):
-        return {
-            "action": "emergency_escalation",
-            "message": "Please call 911 immediately.",
-            "severity": "CRITICAL"
-        }
-    
-    # Standard protocol steps (cannot skip)
-    if not session.state.get("vital_signs_gathered"):
-        return {
-            "action": "request_vital_signs",
-            "required": True,
-            "cannot_skip": True  # Protocol enforcement
-        }
-    
-    # Only after all required steps
-    return {
-        "action": "provide_assessment",
-        "protocol_followed": True,
-        "audit_trail": session.get_audit_log()
-    }
-```
-
-**Why this matters:**
-- ✅ **Mandatory protocol steps** cannot be skipped
-- ✅ **Red flag screening** happens first, always  
-- ✅ **Audit trail** shows compliance for legal/regulatory review
-- ✅ **Consistency** across all cases, regardless of AI model
-
-This pattern applies to any domain where reliability and compliance are critical: financial trading, legal review, deployment pipelines, and more.
-
-**🍕 Want to see it in action?** Check out the [pizza ordering demo](https://github.com/mazzucci/mcp-tool-as-guide-pizza) - a complete, runnable implementation of the Tool-as-Guide pattern with an animated demo!
+**Learn more about this pattern:**
+- 📖 [Full Pattern Documentation](https://github.com/mazzucci/tool-as-guide) - Complete guide with comparisons and use cases
 
 ---
 

@@ -1,0 +1,127 @@
+GOAL: Find commands that the user runs repeatedly but Cursor keeps forgetting.
+
+ANALYSIS STEPS:
+
+1. **Read key files** (use your AI understanding, not pattern matching):
+   - package.json → Look at "scripts" section
+   - Makefile → Look for targets
+   - README.md → Find documented commands in code blocks
+   - pyproject.toml / setup.py → Python project commands
+   - Dockerfile / docker-compose.yml → Container commands
+   - .github/workflows/ → CI/CD commands
+   - Any files with "build", "deploy", "test" in name
+
+2. **Understand the tech stack** (be intelligent about it):
+   - React Native? → Suggest iOS/Android build commands
+   - Python? → Suggest test/lint commands
+   - Docker? → Suggest compose up/down
+   - Kubernetes? → Suggest kubectl commands
+   - Multiple services? → Suggest commands for each
+
+3. **Categorize by complexity**:
+   
+   💨 **SIMPLE COMMANDS** (save to .cursor/commands.json):
+   - Single commands or simple chains
+   - Build/test/deploy scripts
+   - npm/make/cargo commands
+   - SSH commands
+   - Docker commands
+   - Anything that's just "run this shell command"
+   
+   🧠 **PYTHON UTILITY CANDIDATES** (needs custom logic):
+   - Requires HTTP client (calling APIs)
+   - Needs data parsing/transformation
+   - Conditional logic or error handling
+   - Multi-step workflows with decision points
+   - Authentication flows
+   
+4. **Present findings to user**:
+   - Group by category (build, test, deploy, etc.)
+   - Show actual command strings
+   - Explain what each does
+   - Recommend which to save
+
+5. **Offer to save**:
+   - For simple: "Want me to save these with remember_command()?"
+   - For complex: "Want me to create a Python utility for [description]?"
+
+REMEMBER: You're using your AI understanding of the project, not rigid pattern matching!
+
+---
+
+PRESENTATION FORMAT:
+
+When presenting findings to user, format like this:
+
+🔍 **Found X command candidates in [project_name]**
+
+**💨 Simple Commands (save to .cursor/commands.json):**
+
+*Build Commands:*
+- `build-ios`: cd ios && pod install && cd .. && npx react-native run-ios
+- `build-android`: npx react-native run-android --variant=release
+
+*Test Commands:*
+- `test`: npm test
+- `test-e2e`: npm run test:e2e
+
+*Deploy Commands:*
+- `deploy-staging`: ./scripts/deploy.sh staging
+- `deploy-prod`: ./scripts/deploy.sh production
+
+**🧠 Python Utility Candidates (need custom logic):**
+- Debug API at `api.company.com/debug` → Needs HTTP client + auth
+- Database query script → Needs connection + result formatting
+
+**Want me to save these?**
+Say "save all" or "save [specific command]"
+
+---
+
+EXAMPLE WORKFLOW:
+
+USER: "discover commands in this project"
+CURSOR: *Calls discover_project_commands() → Gets this guide*
+CURSOR: *Reads package.json, README.md, Makefile intelligently*
+CURSOR: *Identifies 8 npm scripts, 3 documented README commands, 2 API endpoints*
+CURSOR: *Categorizes: 11 simple commands, 2 Python utility candidates*
+CURSOR: *Presents organized list to user*
+CURSOR: "Want me to save all 11 simple commands?"
+USER: "yes"
+CURSOR: *Calls remember_command() for each*
+CURSOR: "✅ Saved! Your team can now clone and use these immediately."
+
+---
+
+WHAT TO LOOK FOR:
+
+**Repetitive Commands:**
+- Commands documented in README that users run manually
+- Build commands with specific flags/configurations
+- Deploy scripts with staging/production variants
+- Test commands with specific suites or options
+- Database migration commands
+- Cache clearing / environment reset commands
+
+**Hidden Complexity:**
+- Commands with environment variables
+- Multi-step processes (build → test → deploy)
+- Commands that require specific working directories
+- Commands with project-specific paths/arguments
+
+**Team Pain Points:**
+- Commands that are 'tribal knowledge' (not documented)
+- Different commands for different environments
+- Commands that fail silently if done wrong
+- Setup commands for new developers
+
+---
+
+TIPS:
+- Use your understanding of the tech stack - be smart, not mechanical
+- Look for patterns in file names and content
+- Check for commands in documentation (README, CONTRIBUTING.md)
+- Consider the developer workflow: setup → develop → test → deploy
+- Present commands in a way that makes sense to the user
+- Offer to save everything at once for convenience
+

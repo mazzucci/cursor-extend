@@ -109,51 +109,44 @@ def test_tool_name_sanitization(generator, temp_output_dir):
 
 
 def test_get_mcp_tool_guide(temp_output_dir):
-    """Test the get_mcp_tool_guide function"""
+    """Test the get_mcp_tool_guide function (instruction-based)"""
     from mcp_extend.server import _get_mcp_tool_guide_impl
     
-    # Test with project_path provided
+    # Test tool guide generation
     result = _get_mcp_tool_guide_impl(
         tool_type="http_api",
         user_requirements="Query weather API",
-        tool_name="weather",
-        project_path=temp_output_dir
+        tool_name="weather"
     )
     
     assert result["status"] == "success"
     assert result["tool_name"] == "weather"
     assert result["tool_type"] == "http_api"
-    assert "project_structure" in result
-    assert "reference_implementation" in result
+    assert result["module_name"] == "weather"
+    
+    # Check instruction-based structure
+    assert "instructions_for_cursor" in result
+    assert "reference_code" in result
     assert "patterns" in result
     assert "best_practices" in result
-    assert "next_steps" in result
+    assert "directory_structure" in result
+    
+    # Verify instructions ask for confirmation
+    assert "Ask user for confirmation" in result["instructions_for_cursor"]
+    assert "Step 1" in result["instructions_for_cursor"]
     
     # Check reference code is included (module name, not server.py)
-    assert "weather.py" in result["reference_implementation"]
-    assert "pyproject.toml" in result["reference_implementation"]
+    assert "weather.py" in result["reference_code"]
+    assert "pyproject.toml" in result["reference_code"]
     # Should NOT have FastMCP
-    assert "fastmcp" not in result["reference_implementation"]["weather.py"].lower()
+    assert "fastmcp" not in result["reference_code"]["weather.py"].lower()
     # Should have httpx
-    assert "httpx" in result["reference_implementation"]["weather.py"].lower()
+    assert "httpx" in result["reference_code"]["weather.py"].lower()
     
     # Check that MCP config is NOT present (pure Python modules don't need it)
     assert "mcp_config_to_merge" not in result
     assert "mcp_config_path" not in result
-    assert "mcp_merge_instructions" not in result
     
-    # Verify tool directory is in .cursor/tools/ (not mcp-tools)
-    assert ".cursor/tools" in result["project_structure"]["tool_directory"]
-    assert ".cursor/mcp-tools" not in result["project_structure"]["tool_directory"]
-    
-    # Test without project_path (should return error)
-    result = _get_mcp_tool_guide_impl(
-        tool_type="http_api",
-        user_requirements="Query weather API",
-        tool_name="weather",
-        project_path=None
-    )
-    
-    assert result["status"] == "error"
-    assert result["error"] == "project_path parameter is required"
-    assert "instructions" in result
+    # Verify tool directory structure uses .cursor/tools/
+    assert ".cursor/tools" in result["directory_structure"]["path"]
+    assert ".cursor/mcp-tools" not in result["directory_structure"]["path"]

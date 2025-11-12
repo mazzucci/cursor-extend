@@ -1,0 +1,30 @@
+**IMPORTANT: Ask user for confirmation before writing files!**
+
+Say: "I'll create a Python utility '{{ tool_name }}' in .cursor/tools/{{ tool_name}}/. Proceed?"
+
+After confirmation, follow these steps:
+
+**Step 1: Create directory structure**
+- Create directory: .cursor/tools/{{ tool_name }}/ (in workspace root)
+
+**Step 2: Write the Python module**
+- File: .cursor/tools/{{ tool_name }}/{{ module_name }}.py
+- Content: Use the reference_code provided below
+- This is the main utility module
+
+**Step 3: Write pyproject.toml**
+- File: .cursor/tools/{{ tool_name }}/pyproject.toml
+- Content: Use the reference_code provided below
+- This defines dependencies for `uv`
+
+**Step 4: Write .gitignore**
+- File: .cursor/tools/{{ tool_name }}/.gitignore
+- Content: Use the reference_code provided below
+- Standard Python ignore patterns
+
+**Step 5: Confirm to user**
+- Show clickable path: "✅ Created Python utility: .cursor/tools/{{ tool_name }}/{{ module_name }}.py"
+- Offer: "Want me to install dependencies? (will run: cd .cursor/tools/{{ tool_name }} && uv sync)"
+- Remind: "Commit .cursor/ to git to share with your team!"
+- Usage: "Import with: from {{ module_name }} import *"
+

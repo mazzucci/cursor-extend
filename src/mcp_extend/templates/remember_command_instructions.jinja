@@ -1,0 +1,33 @@
+**IMPORTANT: Ask user for confirmation before writing files!**
+
+Say: "I'll save '{{ name }}' to .cursor/commands.json. Proceed?"
+
+After confirmation, follow these steps:
+
+**Step 1: Read or create .cursor/commands.json**
+- Path: .cursor/commands.json (in workspace root)
+- If file doesn't exist, create with: {"commands": {}}
+- If exists, read current content
+
+**Step 2: Add command to the JSON**
+- Add/update commands["{{ name }}"] with:
+  {
+    "command": "{{ command }}",
+    "description": "{{ description }}"
+  }
+
+**Step 3: Write .cursor/commands.json**
+- Write the updated JSON with proper formatting (2-space indent)
+- Ensure .cursor directory exists first
+
+**Step 4: Update .cursorrules (if needed)**
+- Path: .cursorrules (in workspace root)
+- If file doesn't exist OR doesn't mention "saved commands":
+  - Append the cursorrules_content provided below
+- If already mentions "saved commands", skip this step
+
+**Step 5: Confirm to user**
+- Show clickable path: "✅ Saved '{{ name }}' to .cursor/commands.json"
+- Remind: "Commit .cursor/ and .cursorrules to git to share with your team!"
+- Usage: "Just say '{{ description }}' to run this command"
+
